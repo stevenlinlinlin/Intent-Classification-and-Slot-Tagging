@@ -35,10 +35,13 @@ This is a PyTorch implementation of intent classification and [slot tagging](htt
   },
 ```
 
-# Package Installation
+# Installation
+## package requirements
 ```bash
 pip install -r requirements.txt
 ```
+## download glove.840B.300d.txt
+- download [glove.840B.300d.txt](https://nlp.stanford.edu/projects/glove/) and put it in the data directory
 
 # Intent Classification
 ## Preprocessing
