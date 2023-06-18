@@ -1,6 +1,7 @@
 from typing import List, Dict
 
 from torch.utils.data import Dataset
+import torch
 
 from utils import Vocab, pad_to_len
 
@@ -32,42 +33,21 @@ class SeqClsDataset(Dataset):
 
     def collate_fn(self, samples: List[Dict]) -> Dict:
         # implement collate_fn
-        for i, dict in enumerate(samples):
-            dict["unsort_id"] = i
+        samples.sort(key=lambda x: len(x['text'].split()), reverse=True)
+        batch = {}
+        batch['text'] = [s['text'].split() for s in samples]
+        batch['len'] = torch.tensor(
+            [min(len(s), self.max_len) for s in batch['text']])
+        batch['text'] = self.vocab.encode_batch(batch['text'], self.max_len)
+        batch['text'] = torch.tensor(batch['text'])
+        batch['id'] = [s['id'] for s in samples]
+        if 'intent' in samples[0].keys():
+            batch['intent'] = [self.label2idx(s['intent']) for s in samples]
+            batch['intent'] = torch.tensor(batch['intent'])
+        else:
+            batch['intent'] = torch.zeros(len(samples), dtype=torch.long)
 
-        id_list = []
-        unsort_id_list = []
-
-        ## only for train and eval
-        #label_list = []
-
-        batch_sequence = []
-        batch_text_lengths = []
-        for data in sorted(samples, key=lambda x: len(x["text"].split(" ")), reverse=True):
-            # text
-            batch_sequence.append(data["text"].split(" "))
-            batch_text_lengths.append(len(data["text"].split(" ")))
-
-            # label
-            ## only for train and eval
-            #to_list = [0] * self.num_classes
-            #to_list[self.label2idx(data["intent"])] = 1
-            #label_list.append(self.label2idx(data["intent"]))
-
-            # id
-            id_list.append(data["id"])
-            unsort_id_list.append(data["unsort_id"])
-        
-        text_list = self.vocab.encode_batch(batch_sequence)
-
-        collate = {
-            #"label": label_list,  ## only for train and eval
-            "text": text_list,
-            "id": id_list,
-            "unsort_id": unsort_id_list,
-            "text_lengths": batch_text_lengths
-        }
-        return collate
+        return batch
 
     def label2idx(self, label: str):
         return self.label_mapping[label]
@@ -81,43 +61,22 @@ class SeqTaggingClsDataset(SeqClsDataset):
 
     def collate_fn(self, samples):
         # implement collate_fn
-        for i, dict in enumerate(samples):
-            dict["unsort_id"] = i
+        samples.sort(key=lambda x: len(x['tokens']), reverse=True)
+        batch = {}
+        batch['tokens'] = [s['tokens'] for s in samples]
+        batch['len'] = torch.tensor(
+            [min(len(s), self.max_len) for s in batch['tokens']])
+        batch['tokens'] = self.vocab.encode_batch(
+            batch['tokens'], self.max_len)
+        batch['tokens'] = torch.tensor(batch['tokens'])
+        batch['id'] = [s['id'] for s in samples]
+        if 'tags' in samples[0].keys():
+            batch['tags'] = [[self.label2idx(t)
+                              for t in s['tags']] for s in samples]
+            batch['tags'] = pad_to_len(batch['tags'], self.max_len, 0)
+        else:
+            batch['tags'] = [[0] * self.max_len] * len(samples)
+        batch['tags'] = torch.tensor(batch['tags'])
+        batch['mask'] = batch['tokens'].gt(0).float()
 
-        id_list = []
-        unsort_id_list = []
-
-        ## only fot train and eval
-        #label_list = []
-        #label_seq_list = []
-        
-        batch_sequence = []
-        batch_text_lengths = []
-
-        for data in sorted(samples, key=lambda x: len(x["tokens"]), reverse=True):
-            # token
-            batch_sequence.append(data["tokens"])
-            batch_text_lengths.append(len(data["tokens"]))
-
-            # id
-            unsort_id_list.append(data["unsort_id"])
-            id_list.append(data["id"])
-
-            # tag
-            ## only for train and eval
-            #to_list = []
-            #for tag in data["tags"]:
-                #to_list.append(self.label2idx(tag))
-            #label_seq_list.append(to_list)      
-        #label_list = pad_to_len(label_seq_list, batch_text_lengths[0], -100)
-
-        text_list = self.vocab.encode_batch(batch_sequence)
-
-        collate = {
-            #"label": label_list,  ## only for train and eval
-            "text": text_list,
-            "id": id_list,
-            "unsort_id": unsort_id_list,
-            "text_lengths": batch_text_lengths
-        }
-        return collate
+        return batch
