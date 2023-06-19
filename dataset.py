@@ -36,7 +36,7 @@ class SeqClsDataset(Dataset):
         samples.sort(key=lambda x: len(x['text'].split()), reverse=True)
         batch = {}
         batch['text'] = [s['text'].split() for s in samples]
-        batch['len'] = torch.tensor(
+        batch['text_len'] = torch.tensor(
             [min(len(s), self.max_len) for s in batch['text']])
         batch['text'] = self.vocab.encode_batch(batch['text'], self.max_len)
         batch['text'] = torch.tensor(batch['text'])
@@ -64,7 +64,7 @@ class SeqTaggingClsDataset(SeqClsDataset):
         samples.sort(key=lambda x: len(x['tokens']), reverse=True)
         batch = {}
         batch['tokens'] = [s['tokens'] for s in samples]
-        batch['len'] = torch.tensor(
+        batch['text_len'] = torch.tensor(
             [min(len(s), self.max_len) for s in batch['tokens']])
         batch['tokens'] = self.vocab.encode_batch(
             batch['tokens'], self.max_len)
