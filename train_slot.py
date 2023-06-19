@@ -60,7 +60,7 @@ def main(args):
             
             optimizer.zero_grad()
 
-            outputs = model(inputs, batch["text_lengths"])
+            outputs = model(inputs, batch["text_len"])
             outputs = outputs.permute(0,2,1)
 
             loss = loss_fn(outputs, labels)
@@ -79,7 +79,7 @@ def main(args):
                 inputs = torch.tensor(batch["text"], dtype=torch.int32).to(args.device)
                 labels = torch.tensor(batch["label"], dtype=torch.int64).to(args.device)
 
-                predicts = model(inputs, batch["text_lengths"])
+                predicts = model(inputs, batch["text_len"])
 
                 predicts = torch.argmax(predicts, dim=2)
                 #loss = loss_fn(predicts, labels)
@@ -87,7 +87,7 @@ def main(args):
                 for i in range(args.batch_size):
                     predict_list = []
                     label_list = []
-                    for x in range(batch["text_lengths"][i]): 
+                    for x in range(batch["text_len"][i]):
                         predict_list.append(predicts[i][x].item())
                         label_list.append(labels[i][x].item())
                     if predict_list == label_list:
